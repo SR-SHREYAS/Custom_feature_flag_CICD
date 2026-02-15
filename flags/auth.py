@@ -5,14 +5,17 @@
 from django.conf import settings
 from django.http import JsonResponse
 from functools import wraps
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
 
 def admin_api_key_required(view_func):                          # view_func is the view being decorated from views.py
     @wraps(view_func)                                           # wraps to preserve original view function metadata 
     def _wrapped_view(request, *args, **kwargs):                # inner function to handle the request , *args and **kwargs to pass any additional arguments
         api_key = request.headers.get("X-ADMIN-KEY")            # get the API key from request headers
 
-        if api_key != settings.ADMIN_API_KEY:                   
+        if api_key != os.getenv("ADMIN_API_KEY"):               # check if the API key is valid
             return JsonResponse(
                 {"error": "Forbidden"},
                 status=403
