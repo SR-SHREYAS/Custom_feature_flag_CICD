@@ -7,6 +7,7 @@ from redis.exceptions import RedisError
 from .redis_client import redis_client
 from . import utils
 from .local_cache import LOCAL_FEATURE_CACHE
+from .auth import admin_api_key_required
 
 
 # Create your views here.
@@ -46,7 +47,8 @@ def is_feature_active(request, feature_name):
 
 
 @csrf_exempt
-def feature_status(request, feature_name):
+@admin_api_key_required
+def feature_status_change(request, feature_name):
     if request.method != "PATCH":
         return JsonResponse(
             {"error": "Invalid request method"},
@@ -99,6 +101,7 @@ def feature_status(request, feature_name):
 
 
 @csrf_exempt
+@admin_api_key_required              # redirect flow to auth.py -> admin_api_key_required -> _wrapped_view -> feature_status and then back to admin_api_key_required -> _wrapped_view -> feature_status
 def initialize_features(request, feature_name):
     if request.method != "POST":
         return JsonResponse(
@@ -157,6 +160,7 @@ def initialize_features(request, feature_name):
     
 
 @csrf_exempt
+@admin_api_key_required
 def delete_feature(request, feature_name):
     if request.method != "DELETE":
         return JsonResponse(
