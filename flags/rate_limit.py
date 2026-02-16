@@ -8,15 +8,12 @@ RATE_LIMIT_WINDOW = 60   # Time window in seconds
 
 def admin_rate_limit(view_func):
     @wraps(view_func)
-    def _wrapped_view(request, *args, **kwargs):                 # get the admin API key from request headers and check if it exists 
-        admin_key = request.headers.get("X-ADMIN-KEY")
-        if not admin_key:
-            return JsonResponse(
-                {"error": "Missing admin API key"},
-                status=400
-            )
+    def _wrapped_view(request, *args, **kwargs):
+        admin = getattr(request, "admin", None)
+        if not admin:
+            return JsonResponse({"error": "Unauthorized"}, status=401)
 
-        redis_key = f"rate_limit:admin:{admin_key}"            # Redis key format to track requests per admin API key 
+        redis_key = f"rate_limit:admin:{admin.id}"         # Unique key for each admin     
 
         try:
             current_requests = redis_client.incr(redis_key)       # Increment the request count
