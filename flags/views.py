@@ -17,9 +17,7 @@ def home(request):
     return HttpResponse("Feature Flag service running")
 
 @csrf_exempt
-@admin_required
-@admin_rate_limit
-@require_scope("read")          # RBAC: only admins with "read" scope can access this view
+# public rate limiter(in the future)
 def is_feature_active(request, feature_name):
     redis_domain_name = "feature"
     redis_key = utils.redis_key_generator(redis_domain_name, feature_name)

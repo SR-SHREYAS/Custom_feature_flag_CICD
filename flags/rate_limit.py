@@ -34,3 +34,6 @@ def admin_rate_limit(view_func):
         return view_func(request, *args, **kwargs)
 
     return _wrapped_view
+
+
+# will add a public api rate limiter in the future
