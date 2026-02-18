@@ -7,16 +7,19 @@ from redis.exceptions import RedisError
 from .redis_client import redis_client
 from . import utils
 from .local_cache import LOCAL_FEATURE_CACHE
-from .auth import admin_api_key_required
+from .auth import admin_required 
 from audit.utils import log_audit_event
 from .rate_limit import admin_rate_limit
-
+from .auth import require_scope
 
 # Create your views here.
 def home(request):
     return HttpResponse("Feature Flag service running")
 
-
+@csrf_exempt
+@admin_required
+@admin_rate_limit
+@require_scope("read")          # RBAC: only admins with "read" scope can access this view
 def is_feature_active(request, feature_name):
     redis_domain_name = "feature"
     redis_key = utils.redis_key_generator(redis_domain_name, feature_name)
@@ -65,8 +68,9 @@ def is_feature_active(request, feature_name):
     )
 
 @csrf_exempt
+@admin_required
 @admin_rate_limit
-@admin_api_key_required
+@require_scope("write")
 def feature_status_change(request, feature_name):
     if request.method != "PATCH":
         return JsonResponse(
@@ -122,7 +126,8 @@ def feature_status_change(request, feature_name):
             action = "UPDATE",
             feature_name = feature_name,
             new_value = data["enabled"],
-            performed_by = request.headers.get("X-ADMIN-KEY", "unknown")
+            performed_by = request.admin.name,
+            performed_by_id = request.admin.id
         )
 
         # update cache ONLY after Redis success
@@ -143,8 +148,9 @@ def feature_status_change(request, feature_name):
 
 
 @csrf_exempt
+@admin_required           # redirect flow to auth.py -> admin_required -> _wrapped_view -> feature_status and then back to admin_required -> _wrapped_view -> feature_status
 @admin_rate_limit
-@admin_api_key_required              # redirect flow to auth.py -> admin_api_key_required -> _wrapped_view -> feature_status and then back to admin_api_key_required -> _wrapped_view -> feature_status
+@require_scope("write")
 def initialize_features(request, feature_name):
     if request.method != "POST":
         return JsonResponse(
@@ -185,7 +191,8 @@ def initialize_features(request, feature_name):
             action = "CREATE",
             feature_name = feature_name,
             new_value = False,
-            performed_by = request.headers.get("X-ADMIN-KEY", "unknown")
+            performed_by = request.admin.name,
+            performed_by_id = request.admin.id
         )
 
         # update cache after Redis success
@@ -209,8 +216,9 @@ def initialize_features(request, feature_name):
     
 
 @csrf_exempt
+@admin_required
 @admin_rate_limit
-@admin_api_key_required
+@require_scope("delete")
 def delete_feature(request, feature_name):
     if request.method != "DELETE":
         return JsonResponse(
@@ -241,7 +249,8 @@ def delete_feature(request, feature_name):
             action="DELETE",
             feature_name=feature_name,
             new_value=None,
-            performed_by=request.headers.get("X-ADMIN-KEY", "unknown")
+            performed_by=request.admin.name,
+            performed_by_id=request.admin.id
         )
 
         # update cache after Redis success
@@ -261,6 +270,9 @@ def delete_feature(request, feature_name):
 
 
 @csrf_exempt
+@admin_required
+@admin_rate_limit
+@require_scope("read")
 def list_all_features(request):
 
     if request.method != "GET":
@@ -325,8 +337,9 @@ def list_all_features(request):
     
 
 @csrf_exempt
+@admin_required
 @admin_rate_limit
-@admin_api_key_required
+@require_scope("write")
 def restore_feature(request, feature_name):
     if request.method != "POST":
         return JsonResponse(
@@ -377,7 +390,8 @@ def restore_feature(request, feature_name):
             action="UPDATE",   # keep enum consistent for now
             feature_name=feature_name,
             new_value=False,
-            performed_by=request.headers.get("X-ADMIN-KEY", "unknown")
+            performed_by=request.admin.name,
+            performed_by_id=request.admin.id
         )
 
         LOCAL_FEATURE_CACHE[redis_key] = False
