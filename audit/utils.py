@@ -1,6 +1,6 @@
 from audit.models import AuditLog
 
-def log_audit_event(action, feature_name, new_value, performed_by):
+def log_audit_event(action, feature_name, new_value, performed_by , performed_by_id = None):
     """
     Utility function to log an audit event.
     
@@ -15,7 +15,8 @@ def log_audit_event(action, feature_name, new_value, performed_by):
             action=action,
             feature_name=feature_name,
             new_value=new_value,
-            performed_by=performed_by
+            performed_by=performed_by,
+            performed_by_id=performed_by_id
         )
     except Exception: 
         # audit must NEVER break main flow 
